@@ -3,16 +3,24 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
+env:
+  FORCE_COLOR: '1'
+
 jobs:
-  test:
-    name: Build and test
+  native:
+    name: Native ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04, ubuntu-24.04-arm]
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +30,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Install Mill
+        run: |
+          MILL_VERSION="$(cat .mill-version)"
+          curl -L "https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/${MILL_VERSION}/mill-dist-${MILL_VERSION}-mill.sh" -o mill
+          chmod +x mill
+          ./mill --version
 
       - name: Run tests
         run: |
@@ -34,3 +49,45 @@ jobs:
       - name: Native smoke test
         run: |
           ./out/echoctl/nativeImage/dest/echoctl --help
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp ./out/echoctl/nativeImage/dest/echoctl "dist/echoctl-linux-${{ matrix.arch }}"
+          chmod +x "dist/echoctl-linux-${{ matrix.arch }}"
+          sha256sum "dist/echoctl-linux-${{ matrix.arch }}" > "dist/echoctl-linux-${{ matrix.arch }}.sha256"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: echoctl-linux-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: native
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download native artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG_NAME" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG_NAME" \
+              --generate-notes
+          fi

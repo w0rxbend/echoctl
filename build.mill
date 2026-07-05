@@ -55,8 +55,7 @@ object echoctl extends ScalaModule, NativeImageModule:
       "--no-fallback",
       "--enable-url-protocols=http,https",
       "-O2",
-      "--install-exit-handlers",
-      "-march=x86-64-v3"
+      "--install-exit-handlers"
     )
   }
 
