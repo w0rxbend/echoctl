@@ -1,0 +1,70 @@
+package build
+
+import mill.*
+import mill.javalib.NativeImageModule
+import mill.scalalib.*
+
+object Versions:
+  val scala: String = "3.3.6"
+
+object Deps:
+  val picocli: mill.javalib.Dep = mvn"info.picocli:picocli:4.7.6"
+  val requests: mill.javalib.Dep = mvn"com.lihaoyi::requests:0.9.0"
+  val upickle: mill.javalib.Dep = mvn"com.lihaoyi::upickle:4.2.1"
+  val osLib: mill.javalib.Dep = mvn"com.lihaoyi::os-lib:0.11.4"
+  val fansi: mill.javalib.Dep = mvn"com.lihaoyi::fansi:0.5.0"
+  val pprint: mill.javalib.Dep = mvn"com.lihaoyi::pprint:0.9.0"
+  val utest: mill.javalib.Dep = mvn"com.lihaoyi::utest:0.8.5"
+  val cask: mill.javalib.Dep = mvn"com.lihaoyi::cask:0.9.7"
+
+object echoctl extends ScalaModule, NativeImageModule:
+  def scalaVersion: T[String] = Task {
+    Versions.scala
+  }
+
+  def scalacOptions: T[Seq[String]] = Task {
+    Seq(
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-Werror"
+    )
+  }
+
+  def mvnDeps: T[Seq[mill.javalib.Dep]] = Task {
+    Seq(
+      Deps.picocli,
+      Deps.requests,
+      Deps.upickle,
+      Deps.osLib,
+      Deps.fansi,
+      Deps.pprint
+    )
+  }
+
+  def mainClass: T[Option[String]] = Task {
+    Some("com.worxbend.echoctl.Main")
+  }
+
+  def jvmId: T[String] = Task {
+    "graalvm-community:24"
+  }
+
+  def nativeImageOptions: T[Seq[String]] = Task {
+    Seq(
+      "--no-fallback",
+      "--enable-url-protocols=http,https",
+      "-O2",
+      "--install-exit-handlers",
+      "-march=x86-64-v3"
+    )
+  }
+
+  object test extends ScalaTests, TestModule.Utest:
+    def mvnDeps: T[Seq[mill.javalib.Dep]] = Task {
+      Seq(Deps.utest, Deps.cask)
+    }
+
+    def testFramework: T[String] = Task {
+      "utest.runner.Framework"
+    }

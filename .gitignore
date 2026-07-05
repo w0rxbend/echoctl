@@ -1,0 +1,9 @@
+.agents/
+.codex/
+out/
+.bsp/
+.metals/
+.scala-build/
+target/
+*.class
+*.log
