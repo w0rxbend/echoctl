@@ -40,8 +40,8 @@ object Config:
   def configPath(overridePath: Option[String]): Path =
     overridePath.map(os.Path(_, os.pwd)).getOrElse(fallbackConfigPath)
 
-  private def env(name: String, env: Map[String, String]): Option[String] =
-    env.get(name).map(_.trim).filter(_.nonEmpty)
+  private def envValue(name: String, values: Map[String, String]): Option[String] =
+    values.get(name).map(_.trim).filter(_.nonEmpty)
 
   private def fallbackProfile(
     file: StoredConfig,
@@ -65,17 +65,17 @@ object Config:
     val profile = selectedProfile.flatMap(file.profiles.get)
 
     val resolvedServer = serverArg
-      .orElse(env("ECHOCTL_SERVER"))
+      .orElse(envValue("ECHOCTL_SERVER", env))
       .orElse(profile.flatMap(_.server))
       .getOrElse(defaultServer)
 
     val resolvedToken = tokenArg
-      .orElse(env("ECHOCTL_TOKEN"))
-      .orElse(env("MATRIX_PROXY_ADMIN_TOKEN"))
+      .orElse(envValue("ECHOCTL_TOKEN", env))
+      .orElse(envValue("MATRIX_PROXY_ADMIN_TOKEN", env))
       .orElse(profile.flatMap(_.token))
 
     val resolvedDevice = deviceArg
-      .orElse(env("ECHOCTL_DEVICE"))
+      .orElse(envValue("ECHOCTL_DEVICE", env))
       .orElse(profile.flatMap(_.device))
 
     ResolvedConfig(
@@ -101,7 +101,7 @@ object Config:
   def write(pathArg: Option[String], config: StoredConfig): Unit =
     val path = configPath(pathArg)
     ensureParent(path)
-    os.write.over(path, write(config, indent = 2))
+    os.write.over(path, upickle.default.write(config, indent = 2))
 
   def useProfile(pathArg: Option[String], profile: String): Option[StoredConfig] =
     val path = configPath(pathArg)

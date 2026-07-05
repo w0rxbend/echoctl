@@ -1,5 +1,6 @@
 package com.worxbend.echoctl.render
 
+import fansi.Color
 import fansi.Str
 import pprint.pprintln
 import upickle.default.write
@@ -7,8 +8,8 @@ import upickle.default.write
 import scala.util.Try
 
 final class Output(json: Boolean, verboseEnabled: Boolean):
-  private def paint(message: String, style: Str => Str): String =
-    style(Str(message)).render
+  private def paint(message: String, style: String => Str): String =
+    style(message).render
 
   val isJson: Boolean = json
 
@@ -29,26 +30,26 @@ final class Output(json: Boolean, verboseEnabled: Boolean):
     if json then
       println(message)
     else
-      println(paint(s"[ok] $message", _.green))
+      println(paint(s"[ok] $message", Color.Green.apply))
 
   def warn(message: String): Unit =
     if json then
       println(message)
     else
-      println(paint(s"[warn] $message", _.yellow))
+      println(paint(s"[warn] $message", Color.Yellow.apply))
 
   def error(message: String): Unit =
     if json then
       System.err.println(message)
     else
-      System.err.println(paint(s"[err] $message", _.red))
+      System.err.println(paint(s"[err] $message", Color.Red.apply))
 
   def verbose(message: String): Unit =
     if verboseEnabled then
       if json then
         System.err.println(message)
       else
-        System.err.println(paint(s"[verbose] $message", _.blue))
+        System.err.println(paint(s"[verbose] $message", Color.Blue.apply))
 
   def prettyPrint[T: upickle.default.Writer](value: T): Unit =
     if json then

@@ -59,7 +59,9 @@ object echoctl extends ScalaModule, NativeImageModule:
       "--no-fallback",
       "--enable-url-protocols=http,https",
       "-O2",
-      "--install-exit-handlers"
+      "--install-exit-handlers",
+      "-H:+UnlockExperimentalVMOptions",
+      s"-H:ReflectionConfigurationFiles=${moduleDir / "resources" / "META-INF" / "native-image" / "com.worxbend" / "echoctl" / "reflect-config.json"}"
     )
   }
 

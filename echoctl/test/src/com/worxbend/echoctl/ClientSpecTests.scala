@@ -104,7 +104,7 @@ private object FakeEchoBackend extends cask.MainRoutes:
   private def parseAndRecordPlay(body: String, device: String) =
     Try(ujson.read(body)).toOption match
       case Some(value) =>
-        lastPlayAnimation = value.obj.get("animation").flatMap(_.str)
+        lastPlayAnimation = value.obj.get("animation").map(_.str)
         lastQueueDevice = Some(device)
         jsonResponse(Obj("request_id" -> "ok"))
       case None =>
@@ -189,7 +189,7 @@ object ClientSpecTests extends TestSuite:
           remaining -= 1
     throw new RuntimeException("fake server did not start")
 
-  val tests = Tests(
+  val tests = Tests {
     test("client includes bearer header and payload on matrix fill") {
       val server = FakeServer(freePort())
       try
@@ -210,7 +210,7 @@ object ClientSpecTests extends TestSuite:
         assert(FakeEchoBackend.lastAuthorization.contains("Bearer unit-token"))
       finally
         server.shutdown()
-    },
+    }
 
     test("client enforces HTTP errors from server") {
       val server = FakeServer(freePort())
@@ -227,7 +227,7 @@ object ClientSpecTests extends TestSuite:
           case _ => assert(false)
       finally
         server.shutdown()
-    },
+    }
 
     test("client requests catalog and list endpoints") {
       val server = FakeServer(freePort())
@@ -246,4 +246,4 @@ object ClientSpecTests extends TestSuite:
       finally
         server.shutdown()
     }
-  )
+  }

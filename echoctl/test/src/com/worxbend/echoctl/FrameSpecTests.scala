@@ -15,7 +15,7 @@ object FrameSpecTests extends TestSuite:
     assert(rows.size == expectedRows)
     assert(rows.forall(_.size == expectedCols))
 
-  val tests = Tests(
+  val tests = Tests {
     test("parses explicit palette and rows section") {
       val path = writeFrame(
         """palette:
@@ -39,7 +39,7 @@ object FrameSpecTests extends TestSuite:
       assertRows(frame.rows)
       assert(frame.palette("off") == Rgb(0, 0, 0))
       assert(frame.palette("red") == Rgb(255, 0, 0))
-    },
+    }
 
     test("parses legacy token stream into 8x8") {
       val content = Seq.fill(64)("#ff0000").mkString(" ")
@@ -49,12 +49,12 @@ object FrameSpecTests extends TestSuite:
       val frame = parsed.toOption.get
       assertRows(frame.rows)
       assert(frame.rows(0).head == Rgb(255, 0, 0))
-    },
+    }
 
     test("rejects non-8x8 frame content") {
       val bad = writeFrame("#ff0000 #00ff00")
       assert(FramePreview.load(bad).isLeft)
-    },
+    }
 
     test("parses comments and numeric rgb() syntax") {
       val path = writeFrame(
@@ -75,4 +75,4 @@ object FrameSpecTests extends TestSuite:
       assert(parsed.isRight)
       assertRows(parsed.toOption.get.rows)
     }
-  )
+  }

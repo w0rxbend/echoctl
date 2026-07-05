@@ -31,7 +31,7 @@ object Main:
 class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
   override def handleExecutionException(
     ex: Exception,
-    commandLine: CommandLine[_],
+    commandLine: CommandLine,
     parseResult: CommandLine.ParseResult
   ): Int =
     ex match
@@ -43,7 +43,6 @@ class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
 
 @Command(
   name = "echoctl",
-  mixinStandardHelpOptions = true,
   subcommands = Array(
     classOf[HealthCommand],
     classOf[ReadyCommand],
@@ -64,6 +63,9 @@ class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
   )
 )
 class EchoCtl extends Runnable:
+  @CliOption(names = Array("-h", "--help"), usageHelp = true, description = Array("Show this help message and exit"))
+  var help: Boolean = false
+
   @CliOption(names = Array("--server"), description = Array("Echo API base URL"))
   var server: String = null
 
@@ -156,6 +158,8 @@ class AnimationsCommand extends Runnable:
   @ParentCommand
   private var parent: EchoCtl = null
 
+  def context: CliContext = parent.context
+
   override def run(): Unit =
     throw CliFailure(ExitCode.Usage, "animations list|catalog")
 
@@ -165,7 +169,7 @@ class AnimationListCommand extends Runnable:
   private var parent: AnimationsCommand = null
 
   override def run(): Unit =
-    AnimationCommands(parent.parent.context).list()
+    AnimationCommands(parent.context).list()
 
 @Command(name = "catalog", description = Array("Catalog animations"))
 class AnimationCatalogCommand extends Runnable:
@@ -173,7 +177,7 @@ class AnimationCatalogCommand extends Runnable:
   private var parent: AnimationsCommand = null
 
   override def run(): Unit =
-    AnimationCommands(parent.parent.context).catalog()
+    AnimationCommands(parent.context).catalog()
 
 @Command(name = "play", description = Array("Enqueue generated/frame animation"))
 class PlayCommand extends Runnable:
@@ -358,6 +362,8 @@ class MatrixCommand extends Runnable:
   @ParentCommand
   private var parent: EchoCtl = null
 
+  def context: CliContext = parent.context
+
   override def run(): Unit =
     parent.context
     throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|frame")
@@ -371,7 +377,7 @@ class MatrixFillCommand extends Runnable:
   var color: String = null
 
   override def run(): Unit =
-    MatrixCommands(parent.parent.context).fill(color)
+    MatrixCommands(parent.context).fill(color)
 
 @Command(name = "clear", description = Array("Clear matrix (background state may restore over clear)"))
 class MatrixClearCommand extends Runnable:
@@ -379,7 +385,7 @@ class MatrixClearCommand extends Runnable:
   private var parent: MatrixCommand = null
 
   override def run(): Unit =
-    MatrixCommands(parent.parent.context).clear()
+    MatrixCommands(parent.context).clear()
 
 @Command(name = "brightness", description = Array("Set matrix brightness"))
 class MatrixBrightnessCommand extends Runnable:
@@ -390,7 +396,7 @@ class MatrixBrightnessCommand extends Runnable:
   var value: Integer = null
 
   override def run(): Unit =
-    MatrixCommands(parent.parent.context).brightness(value.intValue())
+    MatrixCommands(parent.context).brightness(value.intValue())
 
 @Command(name = "frame", description = Array("Preview local frame file"))
 class MatrixFrameCommand extends Runnable:
@@ -401,7 +407,7 @@ class MatrixFrameCommand extends Runnable:
   var path: String = null
 
   override def run(): Unit =
-    MatrixCommands(parent.parent.context).frame(path)
+    MatrixCommands(parent.context).frame(path)
 
 @Command(name = "pixel", description = Array("Deprecated endpoint, not implemented"))
 class MatrixPixelCommand extends Runnable:
@@ -412,7 +418,7 @@ class MatrixPixelCommand extends Runnable:
   var values: java.util.List[String] = new java.util.ArrayList[String]()
 
   override def run(): Unit =
-    parent.parent.context.output.error("matrix pixel is not supported by this CLI build")
+    parent.context.output.error("matrix pixel is not supported by this CLI build")
     throw CliFailure(ExitCode.Validation, "matrix pixel not supported")
 
 @Command(name = "panel", description = Array("Deprecated endpoint, not implemented"))
@@ -424,7 +430,7 @@ class MatrixPanelCommand extends Runnable:
   var values: java.util.List[String] = new java.util.ArrayList[String]()
 
   override def run(): Unit =
-    parent.parent.context.output.error("matrix panel is not supported by this CLI build")
+    parent.context.output.error("matrix panel is not supported by this CLI build")
     throw CliFailure(ExitCode.Validation, "matrix panel not supported")
 
 @Command(
@@ -439,6 +445,8 @@ class BackgroundCommand extends Runnable:
   @ParentCommand
   private var parent: EchoCtl = null
 
+  def context: CliContext = parent.context
+
   override def run(): Unit =
     parent.context
     throw CliFailure(ExitCode.Usage, "background get|set")
@@ -449,7 +457,7 @@ class BackgroundGetCommand extends Runnable:
   private var parent: BackgroundCommand = null
 
   override def run(): Unit =
-    BackgroundCommands(parent.parent.context).get()
+    BackgroundCommands(parent.context).get()
 
 @Command(name = "set", description = Array("Set background animation"))
 class BackgroundSetCommand extends Runnable:
@@ -463,7 +471,7 @@ class BackgroundSetCommand extends Runnable:
   var noRestore: Boolean = false
 
   override def run(): Unit =
-    BackgroundCommands(parent.parent.context).set(animation, noRestore)
+    BackgroundCommands(parent.context).set(animation, noRestore)
 
 @Command(name = "queue", description = Array("Queue commands"))
 class QueueCommand extends Runnable:
@@ -491,6 +499,8 @@ class ConfigCommand extends Runnable:
   @ParentCommand
   private var parent: EchoCtl = null
 
+  def context: CliContext = parent.context
+
   override def run(): Unit =
     parent.context
     throw CliFailure(ExitCode.Usage, "config list|show|init|use")
@@ -501,7 +511,7 @@ class ConfigListCommand extends Runnable:
   private var parent: ConfigCommand = null
 
   override def run(): Unit =
-    ConfigCommands(parent.parent.context).list()
+    ConfigCommands(parent.context).list()
 
 @Command(name = "show", description = Array("Show current config"))
 class ConfigShowCommand extends Runnable:
@@ -509,7 +519,7 @@ class ConfigShowCommand extends Runnable:
   private var parent: ConfigCommand = null
 
   override def run(): Unit =
-    ConfigCommands(parent.parent.context).show()
+    ConfigCommands(parent.context).show()
 
 @Command(name = "init", description = Array("Initialize profile"))
 class ConfigInitCommand extends Runnable:
@@ -529,7 +539,7 @@ class ConfigInitCommand extends Runnable:
   var token: String = null
 
   override def run(): Unit =
-    ConfigCommands(parent.parent.context).init(
+    ConfigCommands(parent.context).init(
       profile,
       Option(server),
       Option(device),
@@ -545,4 +555,4 @@ class ConfigUseCommand extends Runnable:
   var profile: String = null
 
   override def run(): Unit =
-    ConfigCommands(parent.parent.context).use(profile)
+    ConfigCommands(parent.context).use(profile)

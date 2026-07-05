@@ -48,12 +48,12 @@ jobs:
 
       - name: Native smoke test
         run: |
-          ./out/echoctl/nativeImage/dest/echoctl --help
+          ./out/echoctl/nativeImage.dest/native-executable --help
 
       - name: Package binary
         run: |
           mkdir -p dist
-          cp ./out/echoctl/nativeImage/dest/echoctl "dist/echoctl-linux-${{ matrix.arch }}"
+          cp ./out/echoctl/nativeImage.dest/native-executable "dist/echoctl-linux-${{ matrix.arch }}"
           chmod +x "dist/echoctl-linux-${{ matrix.arch }}"
           sha256sum "dist/echoctl-linux-${{ matrix.arch }}" > "dist/echoctl-linux-${{ matrix.arch }}.sha256"
 

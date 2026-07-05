@@ -24,9 +24,9 @@ object FramePreview:
   )
 
   def parseColor(raw: String): Option[Rgb] =
-    val trimmed = raw.trim.toLowerCase
+    val trimmed = stripQuotes(raw.trim).toLowerCase
     if trimmed.isEmpty then None
-    else if trimmed.startsWith("#") && hexColor.matches(trimmed) then
+    else if isHexColor(trimmed) then
       Try {
         val hex = trimmed.drop(1)
         Rgb(
@@ -52,7 +52,8 @@ object FramePreview:
       else
         val normalized = lines.map(_.trim).filter(_.nonEmpty)
         val (palette, rowsSource) = splitSections(normalized)
-        val parsedRows = if rowsSource.isEmpty then
+        val hasRowsSection = normalized.exists(_.equalsIgnoreCase("rows:"))
+        val parsedRows = if !hasRowsSection then
           parseLegacyRows(normalized.filterNot(inPaletteHeader))
         else
           parseRows(rowsSource)
@@ -146,9 +147,28 @@ object FramePreview:
       case _ => splitLegacyRow(line).flatMap(parseColor)
 
   private def splitArrayTokens(raw: String): Seq[String] =
-    raw.split(",")
-      .map(_.trim)
-      .filter(_.nonEmpty)
+    val tokens = collection.mutable.ListBuffer.empty[String]
+    val current = new StringBuilder
+    var depth = 0
+
+    for char <- raw do
+      char match
+        case '(' =>
+          depth += 1
+          current.append(char)
+        case ')' =>
+          depth = math.max(0, depth - 1)
+          current.append(char)
+        case ',' if depth == 0 =>
+          val token = current.toString.trim
+          if token.nonEmpty then tokens += token
+          current.clear()
+        case other =>
+          current.append(other)
+
+    val tail = current.toString.trim
+    if tail.nonEmpty then tokens += tail
+    tokens.toSeq
 
   private def splitLegacyRow(line: String): Seq[String] =
     line
@@ -158,10 +178,16 @@ object FramePreview:
       .toSeq
       .map(_.trim)
       .filter(_.nonEmpty)
-      .filter(!_.startsWith("#") || hexColor.matches(_.toLowerCase))
+      .filter(token => !token.startsWith("#") || isHexColor(token.toLowerCase))
 
   private def isTopComment(line: String): Boolean =
     val trimmed = line.trim
     trimmed.startsWith("#") && hexColor.findFirstIn(trimmed).isEmpty
+
+  private def stripQuotes(value: String): String =
+    value.stripPrefix("\"").stripSuffix("\"").stripPrefix("'").stripSuffix("'")
+
+  private def isHexColor(value: String): Boolean =
+    hexColor.pattern.matcher(value).matches()
 
   private def inRange(value: Int): Boolean = 0 <= value && value <= 255

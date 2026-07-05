@@ -8,7 +8,7 @@ import upickle.default.write
 import utest.{TestSuite, Tests, test}
 
 object LibrarySpec extends TestSuite:
-  val tests = Tests(
+  val tests = Tests {
     test("command support parses colors and durations") {
       assert(CommandSupport.parseColor("#00ff55").contains((0, 255, 85)))
       assert(CommandSupport.parseColor("rgb(1, 2, 3)").contains((1, 2, 3)))
@@ -19,7 +19,7 @@ object LibrarySpec extends TestSuite:
       assert(CommandSupport.isDuration("80ms"))
       assert(!CommandSupport.isDuration("three-seconds"))
       assert(!CommandSupport.isDuration("3"))
-    },
+    }
 
     test("effect table resolves by name and index") {
       assert(Presets.resolve("chase").contains(1))
@@ -28,7 +28,7 @@ object LibrarySpec extends TestSuite:
       assert(Presets.resolve("99").isEmpty)
       assert(Presets.name(1) == "chase")
       assert(Presets.name(99).startsWith("effect_"))
-    },
+    }
 
     test("config resolution uses flags over env over file") {
       val dir = os.temp.dir()
@@ -64,4 +64,4 @@ object LibrarySpec extends TestSuite:
       assert(resolved.profile.contains("home"))
       assert(resolved.configPath == path)
     }
-  )
+  }

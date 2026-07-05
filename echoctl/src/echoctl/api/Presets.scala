@@ -28,7 +28,7 @@ object Presets:
   )
 
   private val normalized: Map[String, Int] =
-    effects.view.mapValues(_.toLowerCase).toMap ++ Map("stop" -> 0)
+    effects.map { case (id, name) => name.toLowerCase -> id }
 
   def resolve(raw: String): Option[Int] =
     val normalizedValue = raw.trim.toLowerCase.replace('-', '_')
