@@ -46,6 +46,10 @@ object echoctl extends ScalaModule, NativeImageModule:
     Some("com.worxbend.echoctl.Main")
   }
 
+  override def nativeImageClasspath: T[Seq[PathRef]] = Task {
+    Seq(assembly())
+  }
+
   def jvmId: T[String] = Task {
     "graalvm-community:24"
   }
