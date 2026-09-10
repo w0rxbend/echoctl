@@ -9,6 +9,17 @@ object ExitCode:
   val Connection = 3
   val Validation = 4
 
+  /** The config file exists but could not be parsed. Distinct from Usage so a
+    * script can tell "you typed it wrong" from "your config file is broken".
+    */
+  val Config = 5
+
+  /** An unexpected exception escaped a command. Previously these were reported
+    * as Connection, which made a bug in the CLI indistinguishable from the
+    * server being unreachable.
+    */
+  val Internal = 6
+
 sealed trait ApiError:
   def exitCode: Int
   def kind: String

@@ -27,6 +27,8 @@ object echoctl extends ScalaModule, NativeImageModule:
       "-deprecation",
       "-feature",
       "-unchecked",
+      "-Wvalue-discard",
+      "-Wnonunit-statement",
       "-Werror"
     )
   }

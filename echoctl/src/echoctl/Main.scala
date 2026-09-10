@@ -24,11 +24,11 @@ import scala.jdk.CollectionConverters._
 object Main:
   def main(args: Array[String]): Unit =
     val root = EchoCtl()
-    val cli = CommandLine(root).setExecutionExceptionHandler(new CliExecutionExceptionHandler)
+    val cli = CommandLine(root).setExecutionExceptionHandler(CliExecutionExceptionHandler(root))
     val code = cli.execute(args*)
     System.exit(code)
 
-class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
+class CliExecutionExceptionHandler(root: EchoCtl) extends IExecutionExceptionHandler:
   override def handleExecutionException(
     ex: Exception,
     commandLine: CommandLine,
@@ -36,10 +36,21 @@ class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
   ): Int =
     ex match
       case failure: CliFailure =>
+        // Already reported through Output by whoever threw it.
         failure.exitCode
+      case broken: Config.ConfigParseError =>
+        commandLine.getErr.println(describe(broken))
+        ExitCode.Config
       case other =>
-        commandLine.getErr.println(other.getMessage)
-        ExitCode.Connection
+        commandLine.getErr.println(describe(other))
+        if root.verbose then other.printStackTrace(commandLine.getErr)
+        ExitCode.Internal
+
+  /** getMessage is null for plenty of JVM exceptions -- an NPE among them -- so
+    * fall back to the class name rather than printing the word "null".
+    */
+  private def describe(ex: Throwable): String =
+    Option(ex.getMessage).filter(_.nonEmpty).getOrElse(ex.getClass.getName)
 
 @Command(
   name = "echoctl",
@@ -104,7 +115,9 @@ class EchoCtl extends Runnable:
     cachedContext
 
   override def run(): Unit =
-    cachedContext
+    // Resolve config first, so a broken config file is reported as such rather
+    // than hidden behind the usage message.
+    val _ = context
     throw CliFailure(ExitCode.Usage, "missing command; use --help")
 
 @Command(name = "health", description = Array("GET /healthz"))
@@ -382,7 +395,9 @@ class MatrixCommand extends Runnable:
   def context: CliContext = parent.context
 
   override def run(): Unit =
-    parent.context
+    // Resolve config for its side effect: a broken config file should be
+    // reported as such rather than hidden behind the usage message.
+    val _ = parent.context
     throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|pixel|panel|frame|animation")
 
 @Command(name = "fill", description = Array("Fill matrix with color (background state may restore over fill/clear)"))
@@ -489,7 +504,9 @@ class BackgroundCommand extends Runnable:
   def context: CliContext = parent.context
 
   override def run(): Unit =
-    parent.context
+    // Resolve config for its side effect: a broken config file should be
+    // reported as such rather than hidden behind the usage message.
+    val _ = parent.context
     throw CliFailure(ExitCode.Usage, "background get|set")
 
 @Command(name = "get", description = Array("Get background state"))
@@ -543,7 +560,9 @@ class ConfigCommand extends Runnable:
   def context: CliContext = parent.context
 
   override def run(): Unit =
-    parent.context
+    // Resolve config for its side effect: a broken config file should be
+    // reported as such rather than hidden behind the usage message.
+    val _ = parent.context
     throw CliFailure(ExitCode.Usage, "config list|show|init|use")
 
 @Command(name = "list", description = Array("List config profiles"))

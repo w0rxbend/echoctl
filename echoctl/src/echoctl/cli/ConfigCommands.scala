@@ -34,7 +34,7 @@ final class ConfigCommands(val ctx: CliContext) extends CommandSupport:
     device: Option[String],
     token: Option[String]
   ): Unit =
-    Config.initProfile(Some(path), profile, server, device, token)
+    val _ = Config.initProfile(Some(path), profile, server, device, token)
     ctx.output.ok(s"initialized profile '$profile' in $path")
 
   def use(profile: String): Unit =
