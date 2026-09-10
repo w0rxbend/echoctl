@@ -3,7 +3,7 @@ package com.worxbend.echoctl.config
 import upickle.default._
 import upickle.default.ReadWriter
 import os.Path
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 case class Profile(
   server: Option[String] = None,
@@ -30,12 +30,25 @@ object Config:
   private val fallbackConfigPath: Path =
     os.home / ".config" / "echoctl" / "config.json"
 
+  /** Thrown when a config file exists but cannot be parsed.
+    *
+    * Swallowing the parse failure and returning an empty config was actively
+    * destructive: every write path reads the file, adds to the result, and
+    * writes it back, so one stray comma meant reading nothing, adding one
+    * profile, and overwriting the user's other profiles with it.
+    */
+  final class ConfigParseError(val path: Path, cause: Throwable)
+      extends RuntimeException(s"$path is not valid JSON: ${cause.getMessage}", cause)
+
   private def readFile(path: Path): StoredConfig =
-    if os.exists(path) then
+    if !os.exists(path) then StoredConfig()
+    else
       val raw = os.read(path)
       if raw.trim.isEmpty then StoredConfig()
-      else Try(read[StoredConfig](raw)).getOrElse(StoredConfig())
-    else StoredConfig()
+      else
+        Try(read[StoredConfig](raw)) match
+          case Success(config) => config
+          case Failure(cause) => throw ConfigParseError(path, cause)
 
   def configPath(overridePath: Option[String]): Path =
     overridePath.map(os.Path(_, os.pwd)).getOrElse(fallbackConfigPath)
@@ -94,14 +107,24 @@ object Config:
 
   def readOrCreate(pathArg: Option[String] = None): StoredConfig = readFile(configPath(pathArg))
 
+  /** The config file holds Profile.token, the bearer token that unlocks every
+    * admin route on the server, so neither it nor its directory may be readable
+    * by other users on the machine.
+    */
+  private val filePerms: os.PermSet = os.PermSet.fromString("rw-------")
+  private val dirPerms: os.PermSet = os.PermSet.fromString("rwx------")
+
   private def ensureParent(path: Path): Unit =
     if !os.exists(path / os.up) then
-      os.makeDir.all(path / os.up)
+      os.makeDir.all(path / os.up, perms = dirPerms)
 
   def write(pathArg: Option[String], config: StoredConfig): Unit =
     val path = configPath(pathArg)
     ensureParent(path)
-    os.write.over(path, upickle.default.write(config, indent = 2))
+    os.write.over(path, upickle.default.write(config, indent = 2), perms = filePerms)
+    // write.over reuses an existing file's mode, so tighten a file that was
+    // created before this was enforced.
+    os.perms.set(path, filePerms)
 
   def useProfile(pathArg: Option[String], profile: String): Option[StoredConfig] =
     val path = configPath(pathArg)
