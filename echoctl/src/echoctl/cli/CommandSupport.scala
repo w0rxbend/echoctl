@@ -23,16 +23,20 @@ trait CommandSupport:
   protected def requireDevice(explicit: Option[String] = None): String =
     explicit.orElse(ctx.config.device) match
       case Some(value) => value
-      case None =>
-        val message = ctx.client.listDevices() match
-          case Left(error) => fail(error)
-          case Right(response) =>
-            val devices = response.value.devices.sorted
-            if devices.isEmpty then
-              deviceRequired
-            else
-              s"$deviceRequired. Available: ${devices.mkString(", ")}"
-        failUsage(message)
+      case None => failUsage(deviceRequiredMessage())
+
+  /** Naming the available devices is an enhancement to the usage message, so its
+    * failure must not replace it. /api/v1/devices is admin-only: without a token
+    * the lookup returns 401, and reporting that told the user about the wrong
+    * problem when all they had done was omit --device.
+    */
+  private def deviceRequiredMessage(): String =
+    ctx.client.listDevices() match
+      case Left(_) => deviceRequired
+      case Right(response) =>
+        val devices = response.value.devices.sorted
+        if devices.isEmpty then deviceRequired
+        else s"$deviceRequired. Available: ${devices.mkString(", ")}"
 
   protected def ok(message: String): Unit =
     ctx.output.ok(message)
@@ -64,12 +68,6 @@ trait CommandSupport:
           ctx.output.short(render(resp.value))
       case Left(error) =>
         fail(error)
-
-  protected def printRawOrRender[T](
-    result: Either[ApiError, ApiResponse[T]],
-    render: T => String
-  ): Unit =
-    printResponse(result, render)
 
   protected def printText(result: Either[ApiError, String]): Unit =
     result match
