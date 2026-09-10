@@ -5,6 +5,8 @@ import upickle.default._
 
 import scala.util.{Failure, Success, Try}
 
+import com.worxbend.echoctl.api.EchoClient.{ConnectTimeoutMs, Method, ReadTimeoutMs}
+
 final case class EchoClient(baseUrl: String, token: Option[String]):
   private val base = normalize(baseUrl)
   private val session = Session()
@@ -30,49 +32,23 @@ final case class EchoClient(baseUrl: String, token: Option[String]):
     Try(read[ErrorResponse](body)).toOption.map(_.error)
 
   private def request(
-    method: String,
+    method: Method,
     path: String,
     body: Option[String] = None
   ): Either[ApiError, requests.Response] =
     Try {
       val route = url(path)
+      val headers = commonHeaders ++ authHeaders
+      val data = body.getOrElse("{}")
       method match
-        case "GET" =>
-          session.get(
-            route,
-            headers = commonHeaders ++ authHeaders,
-            readTimeout = 10000,
-            connectTimeout = 5000,
-            check = false
-          )
-        case "DELETE" =>
-          session.delete(
-            route,
-            headers = commonHeaders ++ authHeaders,
-            readTimeout = 10000,
-            connectTimeout = 5000,
-            check = false
-          )
-        case "POST" =>
-          session.post(
-            route,
-            headers = commonHeaders ++ authHeaders,
-            data = body.getOrElse("{}"),
-            readTimeout = 10000,
-            connectTimeout = 5000,
-            check = false
-          )
-        case "PUT" =>
-          session.put(
-            route,
-            headers = commonHeaders ++ authHeaders,
-            data = body.getOrElse("{}"),
-            readTimeout = 10000,
-            connectTimeout = 5000,
-            check = false
-          )
-        case other =>
-          throw new IllegalArgumentException(s"unsupported method $other")
+        case Method.Get =>
+          session.get(route, headers = headers, readTimeout = ReadTimeoutMs, connectTimeout = ConnectTimeoutMs, check = false)
+        case Method.Delete =>
+          session.delete(route, headers = headers, readTimeout = ReadTimeoutMs, connectTimeout = ConnectTimeoutMs, check = false)
+        case Method.Post =>
+          session.post(route, headers = headers, data = data, readTimeout = ReadTimeoutMs, connectTimeout = ConnectTimeoutMs, check = false)
+        case Method.Put =>
+          session.put(route, headers = headers, data = data, readTimeout = ReadTimeoutMs, connectTimeout = ConnectTimeoutMs, check = false)
     } match
       case Success(response) => Right(response)
       case Failure(error) => Left(ConnectionError(path, error.toString))
@@ -94,21 +70,21 @@ final case class EchoClient(baseUrl: String, token: Option[String]):
       Right(text)
 
   def get[T: Reader](path: String): Either[ApiError, ApiResponse[T]] =
-    request("GET", path).flatMap(withDecode(path, _))
+    request(Method.Get, path).flatMap(withDecode(path, _))
 
   def post[Req: Writer, Res: Reader](path: String, body: Req): Either[ApiError, ApiResponse[Res]] =
-    request("POST", path, Some(write(body)))
+    request(Method.Post, path, Some(write(body)))
       .flatMap(withDecode(path, _))
 
   def put[Req: Writer, Res: Reader](path: String, body: Req): Either[ApiError, ApiResponse[Res]] =
-    request("PUT", path, Some(write(body)))
+    request(Method.Put, path, Some(write(body)))
       .flatMap(withDecode(path, _))
 
   def delete[T: Reader](path: String): Either[ApiError, ApiResponse[T]] =
-    request("DELETE", path).flatMap(withDecode(path, _))
+    request(Method.Delete, path).flatMap(withDecode(path, _))
 
   def getText(path: String): Either[ApiError, String] =
-    request("GET", path).flatMap(withText(path, _))
+    request(Method.Get, path).flatMap(withText(path, _))
 
   def health(): Either[ApiError, ApiResponse[HealthResponse]] =
     get[HealthResponse]("/healthz")
@@ -172,3 +148,15 @@ final case class EchoClient(baseUrl: String, token: Option[String]):
 
   def openapiSpec(): Either[ApiError, ApiResponse[ujson.Value]] =
     get[ujson.Value]("/openapi.json")
+
+object EchoClient:
+  /** The HTTP verbs this client speaks. An enum rather than a String so the
+    * match in request() is exhaustive: the old version needed a runtime
+    * `throw new IllegalArgumentException` to guard against a typo the compiler
+    * can catch for free.
+    */
+  private[api] enum Method:
+    case Get, Post, Put, Delete
+
+  private[api] val ReadTimeoutMs = 10000
+  private[api] val ConnectTimeoutMs = 5000
