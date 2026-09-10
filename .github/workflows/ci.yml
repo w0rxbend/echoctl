@@ -46,9 +46,36 @@ jobs:
         run: |
           ./mill -i echoctl.nativeImage
 
+      # --help alone never constructs an EchoClient, so it could not catch the
+      # native-image reflection failure that made every server-facing command
+      # die on startup. These exercise config I/O and the HTTP transport.
       - name: Native smoke test
         run: |
-          ./out/echoctl/nativeImage.dest/native-executable --help
+          BIN=./out/echoctl/nativeImage.dest/native-executable
+          "$BIN" --help
+
+          # Reaches the HTTP layer. Port 1 refuses, so this must come back as a
+          # reported connection error (exit 3), not a stack trace.
+          set +e
+          "$BIN" --server http://127.0.0.1:1 health
+          code=$?
+          set -e
+          if [ "$code" -ne 3 ]; then
+            echo "expected exit 3 (connection), got $code"
+            exit 1
+          fi
+
+          # Reaches config read/write.
+          tmp="$(mktemp -d)"
+          "$BIN" --config "$tmp/config.json" config init ci --server http://127.0.0.1:8080
+          "$BIN" --config "$tmp/config.json" config list
+
+          # The config file holds a bearer token; it must not be group/other readable.
+          perms="$(stat -c '%a' "$tmp/config.json")"
+          if [ "$perms" != "600" ]; then
+            echo "config.json is $perms, expected 600"
+            exit 1
+          fi
 
       - name: Package binary
         run: |

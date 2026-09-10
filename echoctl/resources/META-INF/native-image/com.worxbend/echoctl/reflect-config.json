@@ -246,5 +246,61 @@
     "allDeclaredMethods": true,
     "queryAllDeclaredConstructors": true,
     "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.Session",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.Session$",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.Requester",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.Requester$",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.BaseSession",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.BaseSession$",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
+  },
+  {
+    "name": "requests.package$",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "queryAllDeclaredConstructors": true,
+    "queryAllDeclaredMethods": true
   }
 ]
