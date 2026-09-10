@@ -54,9 +54,9 @@ object FramePreview:
         val (palette, rowsSource) = splitSections(normalized)
         val hasRowsSection = normalized.exists(_.equalsIgnoreCase("rows:"))
         val parsedRows = if !hasRowsSection then
-          parseLegacyRows(normalized.filterNot(inPaletteHeader))
+          parseLegacyRows(normalized.filterNot(inPaletteHeader), palette)
         else
-          parseRows(rowsSource)
+          parseRows(rowsSource, palette)
 
         parsedRows match
           case Left(message) => Left(message)
@@ -111,40 +111,51 @@ object FramePreview:
       val name = parts(0).trim.toLowerCase.stripPrefix("-").trim
       parseColor(parts(1).trim).map(color => (name, color))
 
-  private def parseLegacyRows(lines: Seq[String]): Either[String, Seq[Seq[Rgb]]] =
-    val values = lines.filterNot(inPaletteHeader).filterNot(isTopComment).flatMap(parseInlineRow)
-    if values.isEmpty then
-      Left("frame file must contain color values")
-    else if values.length != 64 then
-      Left("frame file must contain exactly 64 colors (8x8)")
-    else
-      Right(values.grouped(8).toSeq)
+  private def parseLegacyRows(lines: Seq[String], palette: Map[String, Rgb]): Either[String, Seq[Seq[Rgb]]] =
+    val tokens = lines
+      .filterNot(inPaletteHeader)
+      .filterNot(isTopComment)
+      .flatMap(rowTokens)
+    resolveTokens(tokens, palette).flatMap { values =>
+      if values.isEmpty then Left("frame file must contain color values")
+      else if values.length != 64 then Left("frame file must contain exactly 64 colors (8x8)")
+      else Right(values.grouped(8).toSeq)
+    }
 
-  private def parseRows(lines: Seq[String]): Either[String, Seq[Seq[Rgb]]] =
-    val rows = lines
-      .map(parseRow)
-      .filter(_.nonEmpty)
-    if rows.isEmpty then
-      Left("frame file must contain row data")
-    else if rows.size != 8 then
-      Left("frame file rows must contain 8 rows")
-    else if !rows.forall(_.size == 8) then
-      Left("frame file rows must contain 8 columns")
+  private def parseRows(lines: Seq[String], palette: Map[String, Rgb]): Either[String, Seq[Seq[Rgb]]] =
+    val rowTokenLists = lines.map(rowTokens).filter(_.nonEmpty)
+    if rowTokenLists.isEmpty then Left("frame file must contain row data")
+    else if rowTokenLists.size != 8 then Left("frame file rows must contain 8 rows")
+    else if !rowTokenLists.forall(_.size == 8) then Left("frame file rows must contain 8 columns")
     else
-      Right(rows)
+      val resolved = rowTokenLists.map(resolveTokens(_, palette))
+      resolved.collectFirst { case Left(message) => message } match
+        case Some(message) => Left(message)
+        case None => Right(resolved.map(_.toOption.get))
 
-  private def parseRow(raw: String): Seq[Rgb] =
+  private def rowTokens(raw: String): Seq[String] =
     val line = raw.stripPrefix("-").trim
-    val tokens = line match
+    line match
       case arrayRow(inner) => splitArrayTokens(inner)
       case _ => splitLegacyRow(line)
 
-    tokens.flatMap(parseColor)
-
-  private def parseInlineRow(line: String): Seq[Rgb] =
-    line match
-      case arrayRow(inner) => splitArrayTokens(inner).flatMap(parseColor)
-      case _ => splitLegacyRow(line).flatMap(parseColor)
+  /** Resolves row tokens to colours, consulting the file's own palette first.
+    *
+    * The palette section is the whole point of naming colours, so a named symbol
+    * must win over the built-in names — and a token that resolves to nothing is an
+    * error, not a pixel to quietly drop. Dropping it used to shift every later
+    * pixel in the row and produce a silently wrong picture.
+    */
+  private def resolveTokens(tokens: Seq[String], palette: Map[String, Rgb]): Either[String, Seq[Rgb]] =
+    val resolved = tokens.map { token =>
+      val key = stripQuotes(token.trim).toLowerCase
+      palette.get(key).orElse(parseColor(token)).toRight(token.trim)
+    }
+    resolved.collectFirst { case Left(token) => token } match
+      case Some(token) =>
+        val known = (palette.keys.toSeq.sorted ++ namedColors.keys.toSeq.sorted).mkString(", ")
+        Left(s"unknown color '$token'; use a hex value, rgb(r,g,b), or one of: $known")
+      case None => Right(resolved.map(_.toOption.get))
 
   private def splitArrayTokens(raw: String): Seq[String] =
     val tokens = collection.mutable.ListBuffer.empty[String]

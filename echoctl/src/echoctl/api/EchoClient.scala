@@ -149,6 +149,18 @@ final case class EchoClient(baseUrl: String, token: Option[String]):
   def matrixBrightness(device: String, request: BrightnessRequest): Either[ApiError, ApiResponse[StatusOK]] =
     post[BrightnessRequest, StatusOK](s"/api/v1/devices/$device/matrix/brightness", request)
 
+  def matrixPixel(device: String, request: PixelRequest): Either[ApiError, ApiResponse[StatusOK]] =
+    post[PixelRequest, StatusOK](s"/api/v1/devices/$device/matrix/pixel", request)
+
+  def matrixPanel(device: String, request: PanelRequest): Either[ApiError, ApiResponse[StatusOK]] =
+    post[PanelRequest, StatusOK](s"/api/v1/devices/$device/matrix/panel", request)
+
+  def matrixStatic(device: String, request: ColorRequest): Either[ApiError, ApiResponse[StatusOK]] =
+    post[ColorRequest, StatusOK](s"/api/v1/devices/$device/matrix/static", request)
+
+  def matrixAnimation(device: String, request: AnimationUploadRequest): Either[ApiError, ApiResponse[StatusOK]] =
+    post[AnimationUploadRequest, StatusOK](s"/api/v1/devices/$device/matrix/animation", request)
+
   def getBackground(device: String): Either[ApiError, ApiResponse[BackgroundState]] =
     get[BackgroundState](s"/api/v1/devices/$device/background")
 

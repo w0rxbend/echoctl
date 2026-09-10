@@ -354,8 +354,10 @@ class EventCommand extends Runnable:
     classOf[MatrixClearCommand],
     classOf[MatrixBrightnessCommand],
     classOf[MatrixFrameCommand],
+    classOf[MatrixAnimationCommand],
     classOf[MatrixPixelCommand],
-    classOf[MatrixPanelCommand]
+    classOf[MatrixPanelCommand],
+    classOf[MatrixStaticCommand]
   )
 )
 class MatrixCommand extends Runnable:
@@ -366,7 +368,7 @@ class MatrixCommand extends Runnable:
 
   override def run(): Unit =
     parent.context
-    throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|frame")
+    throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|static|pixel|panel|frame|animation")
 
 @Command(name = "fill", description = Array("Fill matrix with color (background state may restore over fill/clear)"))
 class MatrixFillCommand extends Runnable:
@@ -398,7 +400,7 @@ class MatrixBrightnessCommand extends Runnable:
   override def run(): Unit =
     MatrixCommands(parent.context).brightness(value.intValue())
 
-@Command(name = "frame", description = Array("Preview local frame file"))
+@Command(name = "frame", description = Array("Upload a local frame file to the device (use --preview-only to just render it)"))
 class MatrixFrameCommand extends Runnable:
   @ParentCommand
   private var parent: MatrixCommand = null
@@ -406,32 +408,67 @@ class MatrixFrameCommand extends Runnable:
   @Parameters(index = "0", paramLabel = "PATH")
   var path: String = null
 
-  override def run(): Unit =
-    MatrixCommands(parent.context).frame(path)
+  @CliOption(names = Array("--delay"), description = Array("Frame delay, e.g. 100ms"))
+  var delay: String = "100ms"
 
-@Command(name = "pixel", description = Array("Deprecated endpoint, not implemented"))
+  @CliOption(names = Array("--preview-only"), description = Array("Render locally without uploading"))
+  var previewOnly: Boolean = false
+
+  override def run(): Unit =
+    MatrixCommands(parent.context).frame(path, delay, previewOnly)
+
+@Command(name = "animation", description = Array("Upload up to 8 frames for the device to loop locally"))
+class MatrixAnimationCommand extends Runnable:
+  @ParentCommand
+  private var parent: MatrixCommand = null
+
+  @Parameters(index = "0..*", paramLabel = "PATH", description = Array("Frame files, in play order"))
+  var paths: java.util.List[String] = new java.util.ArrayList[String]()
+
+  @CliOption(names = Array("--delay"), description = Array("Delay between frames, e.g. 80ms"))
+  var delay: String = "80ms"
+
+  override def run(): Unit =
+    MatrixCommands(parent.context).animation(paths.asScala.toSeq, delay)
+
+@Command(name = "pixel", description = Array("Set one pixel: pixel X Y COLOR"))
 class MatrixPixelCommand extends Runnable:
   @ParentCommand
   private var parent: MatrixCommand = null
 
-  @Parameters(index = "0..*", arity = "*")
-  var values: java.util.List[String] = new java.util.ArrayList[String]()
+  @Parameters(index = "0", paramLabel = "X")
+  var x: Integer = null
+
+  @Parameters(index = "1", paramLabel = "Y")
+  var y: Integer = null
+
+  @Parameters(index = "2", paramLabel = "COLOR")
+  var color: String = null
 
   override def run(): Unit =
-    parent.context.output.error("matrix pixel is not supported by this CLI build")
-    throw CliFailure(ExitCode.Validation, "matrix pixel not supported")
+    MatrixCommands(parent.context).pixel(x.intValue(), y.intValue(), color)
 
-@Command(name = "panel", description = Array("Deprecated endpoint, not implemented"))
+@Command(name = "panel", description = Array("Blank or restore output without discarding the image: panel on|off"))
 class MatrixPanelCommand extends Runnable:
   @ParentCommand
   private var parent: MatrixCommand = null
 
-  @Parameters(index = "0..*", arity = "*")
-  var values: java.util.List[String] = new java.util.ArrayList[String]()
+  @Parameters(index = "0", paramLabel = "STATE", description = Array("on or off"))
+  var state: String = null
 
   override def run(): Unit =
-    parent.context.output.error("matrix panel is not supported by this CLI build")
-    throw CliFailure(ExitCode.Validation, "matrix panel not supported")
+    MatrixCommands(parent.context).panel(state)
+
+@Command(name = "static", description = Array("Hold a fixed colour the device keeps asserting"))
+class MatrixStaticCommand extends Runnable:
+  @ParentCommand
+  private var parent: MatrixCommand = null
+
+  @Parameters(index = "0", paramLabel = "COLOR")
+  var color: String = null
+
+  override def run(): Unit =
+    MatrixCommands(parent.context).static(color)
 
 @Command(
   name = "background",

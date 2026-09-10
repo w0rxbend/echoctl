@@ -76,3 +76,60 @@ object FrameSpecTests extends TestSuite:
       assertRows(parsed.toOption.get.rows)
     }
   }
+
+/** The palette section exists so art can name its own colours. Before these tests
+  * the declared palette was parsed and then ignored when resolving rows, so a
+  * custom symbol was silently dropped — shifting every later pixel in the row.
+  */
+object FramePaletteSpecTests extends TestSuite:
+  private def writeFrame(content: String): String =
+    val dir = os.temp.dir()
+    val path = dir / "frame.txt"
+    os.write.over(path, content)
+    path.toString
+
+  private val litFrame =
+    """palette:
+      |  blank: "#000000"
+      |  lit: "#FF0044"
+      |rows:
+      |  - [lit,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,blank,blank]
+      |  - [blank,blank,blank,blank,blank,blank,lit,lit]
+      |""".stripMargin
+
+  val tests = Tests {
+    test("custom palette symbols resolve to their declared colours") {
+      val parsed = FramePreview.load(writeFrame(litFrame))
+      assert(parsed.isRight)
+      val frame = parsed.toOption.get
+      assert(frame.rows.size == 8)
+      assert(frame.rows.forall(_.size == 8))
+      assert(frame.rows.head.head == Rgb(255, 0, 68))
+      assert(frame.rows.head(1) == Rgb(0, 0, 0))
+      assert(frame.rows(7)(6) == Rgb(255, 0, 68))
+      assert(frame.rows(7)(7) == Rgb(255, 0, 68))
+    }
+
+    test("a palette symbol overrides a built-in colour name of the same name") {
+      val content = litFrame.replace("lit", "green").replace("blank", "off")
+      val parsed = FramePreview.load(writeFrame(content))
+      assert(parsed.isRight)
+      // "green" is declared as #FF0044 here, which must beat the built-in green.
+      assert(parsed.toOption.get.rows.head.head == Rgb(255, 0, 68))
+    }
+
+    test("an unknown symbol is an error, not a dropped pixel") {
+      val content = litFrame.replace("[lit,", "[mystery,")
+      val parsed = FramePreview.load(writeFrame(content))
+      assert(parsed.isLeft)
+      assert(parsed.left.exists(_.contains("mystery")))
+      // The message lists what is accepted so the fix is obvious.
+      assert(parsed.left.exists(_.contains("lit")))
+    }
+  }

@@ -137,7 +137,22 @@ case class ReadyzResponse(
   observability_callback_panic_counts: Option[Map[String, Long]] = None
 ) derives ReadWriter
 
-case class MatrixFrameRequest(
-  name: String,
-  frames: Seq[Seq[Rgb]]
+case class PixelRequest(
+  x: Int,
+  y: Int,
+  r: Int,
+  g: Int,
+  b: Int
+) derives ReadWriter
+
+case class PanelRequest(enabled: Boolean) derives ReadWriter
+
+case class AnimationFrameRequest(
+  delay: String,
+  rows: Seq[String]
+) derives ReadWriter
+
+case class AnimationUploadRequest(
+  palette: Map[String, String],
+  frames: Seq[AnimationFrameRequest]
 ) derives ReadWriter
