@@ -68,9 +68,13 @@ final class MatrixCommands(val ctx: CliContext) extends CommandSupport:
     val request = buildUpload(frames, validatedDelay) match
       case Left(message) => failValidation(message)
       case Right(value) => value
+    // Deliberately does not promise the loop keeps running. Any direct matrix
+    // command marks the scheduler's desired background dirty, so when a background
+    // is configured with restore_on_idle the panel reconverges to it as soon as the
+    // queue drains — the uploaded animation is replaced, not looped indefinitely.
     printResponse(
       ctx.client.matrixAnimation(requireDevice(), request),
-      _ => s"uploaded ${frames.length} frame(s); the device is looping them locally"
+      _ => s"uploaded ${frames.length} frame(s) to the device animation slot"
     )
 
   private def loadFrame(path: String): ParsedFrame =
