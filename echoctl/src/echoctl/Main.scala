@@ -53,6 +53,7 @@ class CliExecutionExceptionHandler extends IExecutionExceptionHandler:
     classOf[PlayCommand],
     classOf[PresetCommand],
     classOf[EffectCommand],
+    classOf[EffectsListCommand],
     classOf[StopCommand],
     classOf[NotifyCommand],
     classOf[EventCommand],
@@ -199,13 +200,20 @@ class PlayCommand extends Runnable:
   @CliOption(names = Array("--interrupt-mode"), description = Array("Interrupt mode"))
   var interruptMode: String = null
 
+  @CliOption(
+    names = Array("--loop"),
+    description = Array("Repeat the animation: none (default), until_deadline, or forever (requires --duration)")
+  )
+  var loop: String = null
+
   override def run(): Unit =
     PlaybackCommands(parent.context).play(
       animation,
       Option(duration),
       Option(priority).map(_.toInt),
       Option(restore),
-      Option(interruptMode)
+      Option(interruptMode),
+      Option(loop)
     )
 
 @Command(name = "preset", description = Array("Queue firmware preset by animation id"))
@@ -219,7 +227,15 @@ class PresetCommand extends Runnable:
   override def run(): Unit =
     PlaybackCommands(parent.context).preset(animation)
 
-@Command(name = "effect", description = Array("Apply firmware effect preset"))
+@Command(name = "effects", description = Array("List the firmware effects worth choosing from"))
+class EffectsListCommand extends Runnable:
+  @ParentCommand
+  private var parent: EchoCtl = null
+
+  override def run(): Unit =
+    PlaybackCommands(parent.context).effects()
+
+@Command(name = "effect", description = Array("Apply firmware effect preset (see `effects` for the list)"))
 class EffectCommand extends Runnable:
   @ParentCommand
   private var parent: EchoCtl = null
@@ -356,8 +372,7 @@ class EventCommand extends Runnable:
     classOf[MatrixFrameCommand],
     classOf[MatrixAnimationCommand],
     classOf[MatrixPixelCommand],
-    classOf[MatrixPanelCommand],
-    classOf[MatrixStaticCommand]
+    classOf[MatrixPanelCommand]
   )
 )
 class MatrixCommand extends Runnable:
@@ -368,7 +383,7 @@ class MatrixCommand extends Runnable:
 
   override def run(): Unit =
     parent.context
-    throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|static|pixel|panel|frame|animation")
+    throw CliFailure(ExitCode.Usage, "matrix fill|clear|brightness|pixel|panel|frame|animation")
 
 @Command(name = "fill", description = Array("Fill matrix with color (background state may restore over fill/clear)"))
 class MatrixFillCommand extends Runnable:
@@ -458,17 +473,6 @@ class MatrixPanelCommand extends Runnable:
 
   override def run(): Unit =
     MatrixCommands(parent.context).panel(state)
-
-@Command(name = "static", description = Array("Hold a fixed colour the device keeps asserting"))
-class MatrixStaticCommand extends Runnable:
-  @ParentCommand
-  private var parent: MatrixCommand = null
-
-  @Parameters(index = "0", paramLabel = "COLOR")
-  var color: String = null
-
-  override def run(): Unit =
-    MatrixCommands(parent.context).static(color)
 
 @Command(
   name = "background",

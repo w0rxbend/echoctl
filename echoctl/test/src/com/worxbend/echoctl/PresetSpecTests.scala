@@ -30,7 +30,9 @@ object PresetSpecTests extends TestSuite:
         )
       )
 
-  private lazy val firmwareEffects: Map[Int, String] =
+  private case class FirmwareEffect(id: Int, name: String, status: String, color: String)
+
+  private lazy val firmwareRows: Seq[FirmwareEffect] =
     Files
       .readAllLines(firmwareEffectsFile)
       .asScala
@@ -38,10 +40,14 @@ object PresetSpecTests extends TestSuite:
       .filter(line => line.nonEmpty && !line.startsWith("#"))
       .map { line =>
         line.split("\t").toList match
-          case id :: name :: Nil => id.trim.toInt -> name.trim
+          case id :: name :: status :: color :: Nil =>
+            FirmwareEffect(id.trim.toInt, name.trim, status.trim, color.trim)
           case _ => throw new AssertionError(s"malformed effect row: '$line'")
-        }
-      .toMap
+      }
+      .toSeq
+
+  private lazy val firmwareEffects: Map[Int, String] =
+    firmwareRows.map(r => r.id -> r.name).toMap
 
   val tests: Tests = Tests {
     test("the vendored firmware table is non-empty and covers 0..MaxEffectId") {
@@ -86,9 +92,36 @@ object PresetSpecTests extends TestSuite:
         assert(Presets.resolve(name).isEmpty)
     }
 
-    test("names are listed in id order") {
-      assert(Presets.names.head == "stop")
-      assert(Presets.names.last == "confetti")
-      assert(Presets.names.length == Presets.MaxEffectId + 1)
+    test("the retired set matches the firmware table exactly") {
+      val fromFile = firmwareRows.filter(_.status == "retired").map(_.id).toSet
+      assert(fromFile.nonEmpty)
+      assert(Presets.retired.keySet == fromFile)
+      // Every retired effect must name a replacement, and that replacement must be
+      // an active effect — otherwise the warning sends the user nowhere.
+      for (id, replacement) <- Presets.retired do
+        assert(Presets.names.contains(replacement))
+        assert(!Presets.isRetired(Presets.resolve(replacement).get))
+    }
+
+    test("the colour-ignoring set matches the firmware table exactly") {
+      val fromFile = firmwareRows.filter(_.color == "ignores").map(_.id).toSet
+      assert(fromFile.nonEmpty)
+      assert(Presets.ignoresColor == fromFile)
+    }
+
+    test("retired effects still resolve, so existing configs keep working") {
+      for (id, _) <- Presets.retired do
+        assert(Presets.resolve(Presets.name(id)).contains(id))
+        assert(Presets.resolve(id.toString).contains(id))
+    }
+
+    test("names offers only active effects and excludes the stop sentinel") {
+      assert(!Presets.names.contains("stop"))
+      for (id, _) <- Presets.retired do assert(!Presets.names.contains(Presets.name(id)))
+      // 23 ids, minus stop, minus 6 retired.
+      assert(Presets.names.length == Presets.MaxEffectId + 1 - 1 - Presets.retired.size)
+      assert(Presets.allNames.length == Presets.MaxEffectId + 1)
+      assert(Presets.allNames.head == "stop")
+      assert(Presets.allNames.last == "confetti")
     }
   }

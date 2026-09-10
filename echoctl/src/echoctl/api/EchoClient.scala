@@ -155,9 +155,6 @@ final case class EchoClient(baseUrl: String, token: Option[String]):
   def matrixPanel(device: String, request: PanelRequest): Either[ApiError, ApiResponse[StatusOK]] =
     post[PanelRequest, StatusOK](s"/api/v1/devices/$device/matrix/panel", request)
 
-  def matrixStatic(device: String, request: ColorRequest): Either[ApiError, ApiResponse[StatusOK]] =
-    post[ColorRequest, StatusOK](s"/api/v1/devices/$device/matrix/static", request)
-
   def matrixAnimation(device: String, request: AnimationUploadRequest): Either[ApiError, ApiResponse[StatusOK]] =
     post[AnimationUploadRequest, StatusOK](s"/api/v1/devices/$device/matrix/animation", request)
 

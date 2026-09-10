@@ -39,10 +39,6 @@ final class MatrixCommands(val ctx: CliContext) extends CommandSupport:
       case other => failValidation(s"expected 'on' or 'off', got '$other'")
     printResponse(ctx.client.matrixPanel(requireDevice(), PanelRequest(enabled)), _.status)
 
-  def static(color: String): Unit =
-    val (r, g, b) = resolveFillColor(color)
-    printResponse(ctx.client.matrixStatic(requireDevice(), ColorRequest(r, g, b)), _.status)
-
   /** Previews a frame file, and uploads it as a single-frame animation unless the
     * caller only wants the preview.
     */

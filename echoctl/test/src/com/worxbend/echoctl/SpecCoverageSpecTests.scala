@@ -46,7 +46,6 @@ object SpecCoverageSpecTests extends TestSuite:
     "post" -> "/api/v1/devices/{device}/matrix/brightness",
     "post" -> "/api/v1/devices/{device}/matrix/pixel",
     "post" -> "/api/v1/devices/{device}/matrix/panel",
-    "post" -> "/api/v1/devices/{device}/matrix/static",
     "post" -> "/api/v1/devices/{device}/matrix/animation",
     "get" -> "/api/v1/devices/{device}/background",
     "put" -> "/api/v1/devices/{device}/background",
@@ -64,6 +63,13 @@ object SpecCoverageSpecTests extends TestSuite:
         specPaths.get(path).exists(_.contains(method))
       }
       assert(missing.isEmpty)
+    }
+
+    test("the removed static route is absent from the server spec") {
+      // renderStatic in the firmware is the same fill that 0x03 calls, so the route
+      // produced pixels indistinguishable from matrix/fill. Opcode 0x07 is retained
+      // server-side for background convergence only.
+      assert(!specPaths.contains("/api/v1/devices/{device}/matrix/static"))
     }
 
     test("the CLI covers every device matrix route the server exposes") {

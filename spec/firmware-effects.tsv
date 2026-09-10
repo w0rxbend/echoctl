@@ -4,31 +4,40 @@
 # switch in TcpMatrixServer::applyCommand) and documented in that repo's
 # CLIENT_PROTOCOL.md. Effect id 0 is the 'stop effect' sentinel.
 #
-# PresetSpecTests asserts Presets.effects matches this file exactly, so a
-# firmware change shows up here as a failing test rather than as the panel
-# quietly playing the wrong animation.
+# PresetSpecTests asserts Presets matches this file exactly, so a firmware change
+# shows up here as a failing test rather than as the panel quietly playing the
+# wrong animation.
 #
-# id	name
-0	stop
-1	chase
-2	color_wipe
-3	blink
-4	wave
-5	rain
-6	meteor
-7	rainbow
-8	breathing
-9	scanner
-10	sparkle
-11	fire
-12	matrix_rain
-13	ripple
-14	theater_chase
-15	twinkle
-16	comet
-17	plasma
-18	diagonal
-19	border_chase
-20	heartbeat
-21	pulse_wipe
-22	confetti
+# status:  active  = a distinct look
+#          retired = still works and still resolves by id, but is a parameter
+#                    variant of another effect; hidden from help and listings so
+#                    nobody picks it by mistake. Ids are NEVER renumbered.
+# color:   honours = the RGB payload changes the output
+#          ignores = the renderer computes its own colours and discards the
+#                    payload. The device still answers OK, so this is the only
+#                    place a client can learn it.
+#
+# id	name	status	color
+0	stop	active	honours
+1	chase	retired	honours
+2	color_wipe	active	honours
+3	blink	active	honours
+4	wave	retired	honours
+5	rain	retired	honours
+6	meteor	retired	honours
+7	rainbow	active	ignores
+8	breathing	active	honours
+9	scanner	active	honours
+10	sparkle	retired	honours
+11	fire	active	ignores
+12	matrix_rain	active	honours
+13	ripple	active	honours
+14	theater_chase	active	honours
+15	twinkle	active	honours
+16	comet	active	honours
+17	plasma	active	ignores
+18	diagonal	active	honours
+19	border_chase	active	honours
+20	heartbeat	active	honours
+21	pulse_wipe	retired	honours
+22	confetti	active	ignores

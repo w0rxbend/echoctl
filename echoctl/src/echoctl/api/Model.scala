@@ -41,7 +41,8 @@ case class PlayRequest(
   interrupt_mode: Option[String] = None,
   params: Option[Map[String, String]] = None,
   priority: Option[Int] = None,
-  restore: Option[String] = None
+  restore: Option[String] = None,
+  loop: Option[String] = None
 ) derives ReadWriter
 
 case class PresetRequest(
